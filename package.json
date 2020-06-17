@@ -1,11 +1,11 @@
 {
-  "name": "dialogflow-fulfillment",
+  "name": "@kwong_cloude8/dialogflow-fulfillment",
   "description": "Dialogflow Fulfillment Library for Node.js",
   "main": "src/dialogflow-fulfillment.js",
   "typings": "./index.d.ts",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "license": "Apache-2.0",
-  "author": "Google Inc.",
+  "author": "Kenneth Wong",
   "directories": {
     "test": "test"
   },
@@ -39,6 +39,7 @@
     "fulfillment"
   ],
   "dependencies": {
+    "actions-on-google": "^2.12.0",
     "debug": "^3.1.0",
     "lodash": "^4.17.11"
   },
@@ -46,11 +47,11 @@
     "actions-on-google": "^2.5.0"
   },
   "devDependencies": {
-    "ava": "^0.24.0",
+    "ava": "^3.9.0",
+    "commander": "^2.15.1",
     "eslint": "^4.15.0",
     "eslint-config-google": "^0.9.1",
-    "jsdoc-to-markdown": "^4.0.1",
-    "jszip": "^3.1.5",
-    "commander": "^2.15.1"
+    "jsdoc-to-markdown": "^6.0.1",
+    "jszip": "^3.1.5"
   }
 }
