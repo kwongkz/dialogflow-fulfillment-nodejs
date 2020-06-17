@@ -3,7 +3,7 @@
   "description": "Dialogflow Fulfillment Library for Node.js",
   "main": "src/dialogflow-fulfillment.js",
   "typings": "./index.d.ts",
-  "version": "0.6.4",
+  "version": "0.6.5",
   "license": "Apache-2.0",
   "author": "Kenneth Wong",
   "directories": {
