@@ -13,21 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-const {debug, error, DialogflowConversation} = require('./common');
+const { DialogflowConversation } = require("actions-on-google");
+const debug = require("debug")("dialogflow:debug");
+
+// Configure logging for hosting platforms that only support console.log and console.error
+debug.log = console.log.bind(console);
+
 // Response and agent classes
-const Text = require('./rich-responses/text-response');
-const Card = require('./rich-responses/card-response');
-const Image = require('./rich-responses/image-response');
-const Suggestion = require('./rich-responses/suggestions-response');
-const Payload = require('./rich-responses/payload-response');
+const Text = require("./rich-responses/text-response");
+const Card = require("./rich-responses/card-response");
+const Image = require("./rich-responses/image-response");
+const Suggestion = require("./rich-responses/suggestions-response");
+const Payload = require("./rich-responses/payload-response");
 const {
   RichResponse,
   PLATFORMS,
   SUPPORTED_PLATFORMS,
   SUPPORTED_RICH_MESSAGE_PLATFORMS,
-} = require('./rich-responses/rich-response');
-const V1Agent = require('./v1-agent');
-const V2Agent = require('./v2-agent');
+} = require("./rich-responses/rich-response");
+const V1Agent = require("./v1-agent");
+const V2Agent = require("./v2-agent");
 
 const RESPONSE_CODE_BAD_REQUEST = 400;
 
@@ -51,10 +56,10 @@ class WebhookClient {
    */
   constructor(options) {
     if (!options.request) {
-      throw new Error('Request can NOT be empty.');
+      throw new Error("Request can NOT be empty.");
     }
     if (!options.response) {
-      throw new Error('Response can NOT be empty.');
+      throw new Error("Response can NOT be empty.");
     }
 
     /**
@@ -98,7 +103,6 @@ class WebhookClient {
      * @type {Object}
      */
     this.followupEvent_ = null;
-
 
     /**
      * Boolean indicating whether the conversation should continue after the Dialogflow agent's response
@@ -225,7 +229,7 @@ class WebhookClient {
       this.client = new V1Agent(this);
     } else {
       throw new Error(
-        'Invalid or unknown request type (not a Dialogflow v1 or v2 webhook request).'
+        "Invalid or unknown request type (not a Dialogflow v1 or v2 webhook request)."
       );
     }
     debug(`Webhook request version ${this.agentVersion}`);
@@ -244,7 +248,7 @@ class WebhookClient {
    */
   add(responses) {
     if (responses instanceof Array) {
-      responses.forEach( (singleResponse) => this.addResponse_(singleResponse) );
+      responses.forEach((singleResponse) => this.addResponse_(singleResponse));
     } else {
       this.addResponse_(responses);
     }
@@ -267,16 +271,22 @@ class WebhookClient {
    * @param {RichResponse|string} response an object or string representing the rich response to be added
    */
   addResponse_(response) {
-    if (typeof response === 'string') {
+    if (typeof response === "string") {
       response = new Text(response);
     }
     if (response instanceof DialogflowConversation) {
       this.client.addActionsOnGoogle_(response.serialize());
-    } else if (response instanceof Suggestion && this.existingSuggestion_(response.platform)) {
-      this.existingSuggestion_(response.platform).addReply_(response.replies[0]);
-    } else if (response instanceof Payload && this.existingPayload_(response.platform)) {
-      throw new Error(`Payload response for ${response.platform} already defined.`);
-    } else if (response instanceof RichResponse) {
+    } else if (
+      response instanceof Suggestion &&
+      this.existingSuggestion_(response.platform)
+    ) {
+      this.existingSuggestion_(response.platform).addReply_(
+        response.replies[0]
+      );
+    } else if (
+      response instanceof RichResponse ||
+      response instanceof Payload
+    ) {
       this.responseMessages_.push(response);
     } else {
       throw new Error(`Unknown response type: "${JSON.stringify(response)}"`);
@@ -287,26 +297,23 @@ class WebhookClient {
    * Handles the incoming Dialogflow request using a handler or Map of handlers
    * Each handler must be a function callback.
    *
-   * @param {Map|requestCallback} handler map of Dialogflow intent name to handler function or
+   * @param {Map|requestCallback} handler map of Dialogflow action name to handler function or
    *     function to handle all requests (regardless of Dialogflow action).
-   *     In an intent map, a null can map to a default handler.
    * @return {Promise}
    */
   handleRequest(handler) {
-    if (typeof handler === 'function') {
+    if (typeof handler === "function") {
       let result = handler(this);
       let promise = Promise.resolve(result);
       return promise.then(() => this.send_());
     }
 
     if (!(handler instanceof Map)) {
-      error('handleRequest argument must be a function or map of intent names to functions');
-      this.response_
-        .status(RESPONSE_CODE_BAD_REQUEST)
-        .status('handleRequest argument must be a function or map of intent names to functions');
-      return Promise.reject( new Error(
-        'handleRequest argument must be a function or map of intent names to functions'
-      ));
+      return Promise.reject(
+        new Error(
+          "handleRequest must contain a map of Dialogflow intent names to function handlers"
+        )
+      );
     }
 
     if (handler.get(this.intent)) {
@@ -320,11 +327,11 @@ class WebhookClient {
       let promise = Promise.resolve(result);
       return promise.then(() => this.send_());
     } else {
-      error('No handler for requested intent');
+      debug("No handler for requested intent");
       this.response_
         .status(RESPONSE_CODE_BAD_REQUEST)
-        .status('No handler for requested intent');
-      return Promise.reject(new Error('No handler for requested intent'));
+        .status("No handler for requested intent");
+      return Promise.reject(new Error("No handler for requested intent"));
     }
   }
 
@@ -346,8 +353,8 @@ class WebhookClient {
    * @deprecated
    */
   setContext(context) {
-    console.warn('setContext is deprecated, migrate to `context.set`');
-    if (typeof context === 'string') {
+    console.warn("setContext is deprecated, migrate to `context.set`");
+    if (typeof context === "string") {
       this.context.set(context);
     } else {
       this.context.set(context.name, context.lifespan, context.parameters);
@@ -367,7 +374,9 @@ class WebhookClient {
    * @deprecated
    */
   clearOutgoingContexts() {
-    console.warn('clearOutgoingContexts is deprecated, migrate to `context.delete` or `context.set`');
+    console.warn(
+      "clearOutgoingContexts is deprecated, migrate to `context.delete` or `context.set`"
+    );
     for (const ctx of this.context) {
       this.context._removeOutgoingContext(ctx.name);
     }
@@ -387,7 +396,9 @@ class WebhookClient {
    * @deprecated
    */
   clearContext(context) {
-    console.warn('clearContext is deprecated, migrate to `context.delete` or `context.set`');
+    console.warn(
+      "clearContext is deprecated, migrate to `context.delete` or `context.set`"
+    );
     this.context._removeOutgoingContext(context);
     return this;
   }
@@ -405,7 +416,7 @@ class WebhookClient {
    * @deprecated
    */
   getContext(contextName) {
-    console.warn('getContext is deprecated, migrate to `context.get`');
+    console.warn("getContext is deprecated, migrate to `context.get`");
     const context = this.context.get(contextName);
     if (context) {
       return {
@@ -432,10 +443,10 @@ class WebhookClient {
    * @param {string|Object} event string with the name of the event or an event object
    */
   setFollowupEvent(event) {
-    if (typeof event === 'string') {
-      event = {name: event};
-    } else if (typeof event.name !== 'string' || !event.name) {
-      throw new Error('Followup event must be a string or have a name string');
+    if (typeof event === "string") {
+      event = { name: event };
+    } else if (typeof event.name !== "string" || !event.name) {
+      throw new Error("Followup event must be a string or have a name string");
     }
 
     this.client.setFollowupEvent_(event);
@@ -481,26 +492,24 @@ class WebhookClient {
     // If AoG response and the first response isn't a text response,
     // add a empty text response as the first item
     if (
-      requestSource === PLATFORMS.ACTIONS_ON_GOOGLE && messages[0] &&
+      requestSource === PLATFORMS.ACTIONS_ON_GOOGLE &&
+      messages[0] &&
       !(messages[0] instanceof Text) &&
       !this.existingPayload_(PLATFORMS.ACTIONS_ON_GOOGLE)
     ) {
-      this.responseMessages_ = [new Text(' ')].concat(messages);
+      this.responseMessages_ = [new Text(" ")].concat(messages);
     }
 
     // if there is only text, send response
     // if platform may support messages, send messages
     // if there is a payload, send the payload for the repsonse
-    const payload = this.existingPayload_(requestSource);
-    if (messages.length === 1 &&
-      messages[0] instanceof Text) {
+    if (messages.length === 1 && messages[0] instanceof Text) {
       this.client.addTextResponse_();
-    } else if (SUPPORTED_RICH_MESSAGE_PLATFORMS.indexOf(this.requestSource) > -1
-      || SUPPORTED_PLATFORMS.indexOf(this.requestSource) < 0) {
+    } else if (
+      SUPPORTED_RICH_MESSAGE_PLATFORMS.indexOf(this.requestSource) > -1 ||
+      SUPPORTED_PLATFORMS.indexOf(this.requestSource) < 0
+    ) {
       this.client.addMessagesResponse_(requestSource);
-    }
-    if (payload && !payload.sendAsMessage) {
-      this.client.addPayloadResponse_(payload, requestSource);
     }
     this.client.sendResponses_(requestSource);
   }
@@ -560,4 +569,4 @@ class WebhookClient {
   }
 }
 
-module.exports = {WebhookClient, Text, Card, Image, Suggestion, Payload};
+module.exports = { WebhookClient, Text, Card, Image, Suggestion, Payload };
